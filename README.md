@@ -7,25 +7,26 @@
 ## Course structure
 
 - 10+ lectures
-- 2 homework assignments (20 pts)
-- 2 group projects (60 pts)
-- 2 seminars (20 pts)
+- 2 [personal assignments](assignments/README.md) [50 pts]
+- 2 group projects [50 pts]
+- 1 seminar [10 pts]
 
-All assignments deadlines will be provided soon.
+All courseworks deadlines ara provided within their descriptions.
 
 
 ## Syllabus
 
-This is a new course that is given for the first time, so the syllabus is subject to slight modifications.
+This is a new course that is given for the first time, so the syllabus is subject to 
+slight modifications during the course.
 
-1. Basics of signal processing - *homework1*
+1. Basics of Digital Signal Processing
 2. Classic ASR and metrics
 3. End-to-End ASR with CTC
 4. ASR decoding: WFST, Beam Search, RNN-T and LM rescoring
 5. Self-supervised speech representations
 6. SSL-finetuned ASR and Whisper
-6. Text-to-Speech systems
-7. Neural vocoders - *homework2*
-8. Modern TTS with normalizing flows and diffusion
-9. Neural Codec Language Models: VALL-E
-10. Extra: Speaker recognition and speech inpainting
+7. Text-to-Speech systems
+8. Neural vocoders - *homework2*
+9. Modern TTS with normalizing flows and diffusion
+10. Neural Codec Language Models: VALL-E
+11. Extra: Speaker recognition and speech inpainting
