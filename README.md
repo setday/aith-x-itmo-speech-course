@@ -19,14 +19,22 @@ All courseworks deadlines ara provided within their descriptions.
 This is a new course that is given for the first time, so the syllabus is subject to 
 slight modifications during the course.
 
-1. Basics of Digital Signal Processing
+1. [Basics of Digital Signal Processing](lectures/week1)
 2. Classic ASR and metrics
 3. End-to-End ASR with CTC
 4. ASR decoding: WFST, Beam Search, RNN-T and LM rescoring
 5. Self-supervised speech representations
 6. SSL-finetuned ASR and Whisper
 7. Text-to-Speech systems
-8. Neural vocoders - *homework2*
+8. Neural vocoders
 9. Modern TTS with normalizing flows and diffusion
 10. Neural Codec Language Models: VALL-E
 11. Extra: Speaker recognition and speech inpainting
+
+
+## Resources
+
+* [Deep Learning for Audio (DLA) course](https://github.com/markovka17/dla/)
+* [Edinburgh University: Automatic Speech Recognition (ASR) course](https://www.inf.ed.ac.uk/teaching/courses/asr/index-2025.html)
+* [Stanford CS224S: Spoken Language Processing](http://web.stanford.edu/class/cs224s/)
+* [Youtube: Mike X Cohen](https://www.youtube.com/@mikexcohen1)
