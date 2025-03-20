@@ -25,7 +25,7 @@ class Wav2Vec2Decoder:
             alpha (float): LM weight for shallow fusion and rescoring
             beta (float): Word bonus for shallow fusion
         """
-        # once logits are available, no other 
+        # once logits are available, no other interactions with the model are allowed
         self.processor = Wav2Vec2Processor.from_pretrained(model_name)
         self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
 
