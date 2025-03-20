@@ -9,7 +9,7 @@ Implement a PyTorch layer (inherit a class from `torch.nn.Module`) for extractio
     - Implementation notes:
         - In this exercise we use [**hann** window](https://pytorch.org/docs/stable/generated/torch.hann_window.html) only
         - Also, power spectrum of spectrogram has to be used
-        - No `torchaudio` functions calls are allowed in this layer implementation
+        - No `torchaudio` functions calls are allowed in this layer implementation other than already provided (i.e. `F.melscale_fbanks()` and `torchaudio.load()` are allowed)
     - Evaluation:
         - For an arbitrary audiofile of 16 kHz sampling frequency, plot the Log MelFilterbanks output versus native `torchaudio.transforms.MelSpectrogram` implementation and attach plots to the report
         - Don't forget that natural `torchaudio.transforms.MelSpectrogram` doesn't apply logarithm
