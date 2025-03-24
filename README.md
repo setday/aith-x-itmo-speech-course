@@ -20,7 +20,7 @@ This is a new course that is given for the first time, so the syllabus is subjec
 slight modifications during the course.
 
 1. [Basics of Digital Signal Processing](lectures/week1)
-2. Classic ASR and metrics
+2. [Classic ASR and metrics](lectures/week2)
 3. End-to-End ASR with CTC
 4. ASR decoding: WFST, Beam Search, RNN-T and LM rescoring
 5. Self-supervised speech representations
