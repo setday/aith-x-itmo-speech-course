@@ -1,0 +1,74 @@
+
+## Group Project 1. Automatic Speech Recognition - [30 pts]
+
+In this exercise you will be building Automatic Speech Recognition system in Russian language. In particular, given the training and validation sets, you are required to train a small NN recognizing russian spoken numbers.
+
+
+### Data Description
+
+You are provided with training and validation sets of pairs (audio, transcript) with a corresponding meta information in a form csv file as follows:
+
+```
+audio_path,gender,spk_id,transcription
+train/9f72bf45ad.wav,male,A,962421
+train/83cc84bee2.wav,female,B,307289
+```
+
+where **transcription** is a number from range `[1_000 .. 999_999]`
+
+```
+
+LINK TO DATA AND TRAIN/VAL SPLITS TO BE UPDATED SOON
+
+```
+
+
+### Project Requirements
+
+- Any architecture, algorithm or training baseline could be used (e.g. open-sourced pipeline or architecture)
+    - However, initialization of a model from pre-trained weights is not allowed. ***Only training from scratch*** on provided training data:
+      - additional training data is not allowed except the samples of noises for augmenation
+      - validation split can not be concatenated to training data and provided to help you tracking the errors and overfitting
+
+- Keep the model small - up to 5M parameters
+
+- You can re-use your work from [personal assignments 1 and 2](../../assignments/), though this is not compulsory
+
+- You can train a KenLM language model for LM fusion and rescoring
+
+- Model training can be run offline using any available hardware resources
+
+
+### Hints 
+
+* When training, track the recognition error (CER/WER) per spekaer `spk_id` - this will show you if the model overfits and performs really badly on unseen voice (maybe you overparameterized your model or forgot various regularizations)
+
+* The labeling is not normalized, meaning that direct transcription may not provide you digits directly (unless you wanna try training such setup) - what you actually hear and what is given as a label differ. You can think of applying normalization and denormalization to transcriptions
+
+* Note that word “тысяча” is always skipped in final denormalized string output
+
+* Don’t forget to use various audio augmentations techniques while training
+
+
+### Evaluation
+
+- Evaluation of models is held on the Kaggle platform as a code competition. Note that this is used for inference only, training of model can be performed in an offline fashion. LINK TO BE PROVIDED SOON
+
+- The model performance will be evaluated on the holdout testing set, containing extra out-of-domain test speakers `spk_id`
+
+- All works will be ranked according to eval metrics. Primary metric is a **harmonic mean CER** for recognized numbers for inD and ooD `spk_id`. ooD CER will be considered as a secondary metric in case of equality of the results
+
+
+### Deliverables
+
+- Kaggle Competition submission and corresponding position on the leaderboard:
+    - submission notebook has to import your model and weights from GitHub
+
+- Public GitHub repository with source code of your training pipeline and model weights (weights as a release in order to be imported in Kaggle)
+
+- Google Classroom PDF report describing your work, experiments and results (and a history of submissions) in free form
+
+
+### Resources
+
+- For text normalization and denormalization you can use [NeMo toolkit](https://github.com/NVIDIA/NeMo-text-processing/blob/main/tutorials/Text_(Inverse)_Normalization.ipynb)
