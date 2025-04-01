@@ -9,12 +9,19 @@ In this exercise you will be building Automatic Speech Recognition system in Rus
 You are provided with training and validation sets of pairs (audio, transcript) with a corresponding meta information in a form csv file as follows:
 
 ```
-audio_path,gender,spk_id,transcription
-train/9f72bf45ad.wav,male,A,962421
-train/83cc84bee2.wav,female,B,307289
+filename,transcription,spk_id,gender,ext,samplerate
+train/0007c21c23.wav,139473,spk_E,female,wav,24000
+train/000bee1b1d.wav,992597,spk_B,male,wav,24000
 ```
 
-where **transcription** is a number from range `[1_000 .. 999_999]`
+where **transcription** is a number from range `[1_000 .. 999_999]`.
+
+There are 3 data splits with 14 unique `spk_id` from **spk_A** to **spk_N** with the following amount of audio samples in each split:
+- `train/`: 12,553 samples from 6 `spk_id` 
+- `dev/`: 2,265 samples from 10 `spk_id`
+- `test/`: 2,265 samples all 14 `spk_id`
+
+> NOTE: `dev/` data CAN NOT be used for trainig, but for validation purposes only
 
 ```
 
@@ -71,4 +78,4 @@ LINK TO DATA AND TRAIN/VAL SPLITS TO BE UPDATED SOON
 
 ### Resources
 
-- For text normalization and denormalization you can use [NeMo toolkit](https://github.com/NVIDIA/NeMo-text-processing/blob/main/tutorials/Text_(Inverse)_Normalization.ipynb)
+- For text normalization and denormalization you can use [NeMo toolkit](https://github.com/NVIDIA/NeMo-text-processing/blob/main/tutorials/Text_(Inverse)_Normalization.ipynb) or [num2words](https://pypi.org/project/num2words/)
