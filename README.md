@@ -6,12 +6,12 @@
 
 ## Course structure
 
-- 10+ lectures
-- 2 [personal assignments](assignments/README.md) [50 pts]
-- 2 group projects [50 pts]
-- 1 seminar [10 pts]
+- [10+ lectures](lectures/README.md)
+- [2 personal assignments](assignments/README.md) [50 pts]
+- [2 group projects](group-projects/README.md) [50 pts]
+- 1 research seminar [10 pts]
 
-All courseworks deadlines ara provided within their descriptions.
+All courseworks deadlines are provided within their corresponding descriptions
 
 
 ## Syllabus
