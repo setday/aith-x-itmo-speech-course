@@ -48,8 +48,18 @@ class Wav2Vec2Decoder:
         Returns:
             str: Decoded transcript
         """
-        # <YOUR CODE GOES HERE>
-        return
+
+        transcript = []  # Prepare empty list for transcript tokens
+        prev_char = None # Previous character ID
+
+        for logit in logits:                       # We don't need to use softmax here, as we are using argmax directly
+            max_index = torch.argmax(logit).item() # Get the index of the most probable token
+
+            if max_index != self.blank_token_id and max_index != prev_char: # Skip blank tokens and duplicates
+                transcript.append(self.vocab[max_index])                    # Append the token to the transcript
+                prev_char = max_index                                       # Update the previous character ID
+
+        return ''.join(transcript).replace(self.word_delimiter, ' ').strip() # Join the tokens and remove word delimiters
 
     def beam_search_decode(self, logits: torch.Tensor, return_beams: bool = False):
         """
@@ -67,7 +77,32 @@ class Wav2Vec2Decoder:
                 (List[Tuple[List[int], float]]) - If return_beams is True, returns a list of tuples
                     containing hypotheses and log probabilities.
         """
-        # <YOUR CODE GOES HERE>
+        
+        probs = torch.softmax(logits, dim=-1)                   # Apply softmax to get probabilities
+        beams = [(torch.ones(1), '', self.blank_token_id)] # Initialize beams with a single empty hypothesis
+
+        for layer_probs in probs: # Iterate over each time step
+            new_beams = {}        # Dictionary to store new beams
+
+            for next_id, proba in enumerate(layer_probs):                                         # Iterate over each character ID and its probability
+                for beam_prob, hypothesis, last_char_id in beams:                                 # Iterate over existing beams
+                    if last_char_id != next_id and next_id != self.blank_token_id:                # Only non-blank and non-duplicate characters can be added to the hypothesis
+                        new_char = self.vocab[next_id] if next_id != self.word_delimiter else ' ' # Handle blank token 
+                        hypothesis = hypothesis + new_char                                        # Append new character ID to the hypothesis
+
+                    key = (hypothesis, next_id)                        # Create a key for the new beam
+                    acc_beam_prob = new_beams.get(key, torch.zeros(1)) # Get the existing beam probability
+
+                    new_beams[key] = acc_beam_prob + proba * beam_prob # Update the probability of the new beam
+
+            new_beams = [(prob, hyp, last_char) for (hyp, last_char), prob in new_beams.items()] # Convert dictionary to list of tuples
+            beams = sorted(new_beams, key=lambda x: x[0], reverse=True)[:self.beam_width]        # Keep only the top beam_width beams
+
+        beams = [(hyp, torch.log(prob + 1e-10).item()) for prob, hyp, _ in beams] # Convert beams to log probabilities
+        transcript = max(beams, key=lambda x: x[0])[0]                            # Get the best hypothesis based on log probability
+
+        best_hypothesis = ''.join(transcript).replace(self.word_delimiter, ' ').strip() # Join the tokens and remove word delimiters
+
         if return_beams:
             return beams
         else:
@@ -88,8 +123,32 @@ class Wav2Vec2Decoder:
         if not self.lm_model:
             raise ValueError("KenLM model required for LM shallow fusion")
         
-        # <YOUR CODE GOES HERE>
-        return
+        probs = torch.softmax(logits, dim=-1)                   # Apply softmax to get probabilities
+        beams = [(torch.ones(1), '', self.blank_token_id)] # Initialize beams with a single empty hypothesis
+
+        for layer_probs in probs: # Iterate over each time step
+            new_beams = {}        # Dictionary to store new beams
+
+            for next_id, proba in enumerate(layer_probs):                                         # Iterate over each character ID and its probability
+                for beam_prob, hypothesis, last_char_id in beams:                                 # Iterate over existing beams
+                    if last_char_id != next_id and next_id != self.blank_token_id:                # Only non-blank and non-duplicate characters can be added to the hypothesis
+                        new_char = self.vocab[next_id] if next_id != self.word_delimiter else ' ' # Handle blank token 
+                        hypothesis = hypothesis + new_char                                        # Append new character ID to the hypothesis
+
+                    key = (hypothesis, next_id)                        # Create a key for the new beam
+                    acc_beam_prob = new_beams.get(key, torch.zeros(1)) # Get the existing beam probability
+                    
+                    _, last_word = hypothesis.rsplit(' ', 1) if ' ' in hypothesis else (None, '') # Get the last word from the hypothesis
+                    lm_prob = torch.tensor(self.lm_model.score(last_word, bos=True, eos=False)) # Get the LM score for the hypothesis
+
+                    new_beams[key] = acc_beam_prob + proba * beam_prob + self.alpha * lm_prob # Update the probability of the new beam
+
+            new_beams = [(prob, hyp, last_char) for (hyp, last_char), prob in new_beams.items()] # Convert dictionary to list of tuples
+            beams = sorted(new_beams, key=lambda x: x[0], reverse=True)[:self.beam_width]        # Keep only the top beam_width beams
+
+        best_beam = max(beams, key=lambda x: x[0]) # Get the best beam based on log probability
+
+        return ''.join(best_beam[1]).replace(self.word_delimiter, ' ').strip() # Join the tokens and remove word delimiters
 
     def lm_rescore(self, beams: List[Tuple[List[int], float]]) -> str:
         """
@@ -103,8 +162,17 @@ class Wav2Vec2Decoder:
         """
         if not self.lm_model:
             raise ValueError("KenLM model required for LM rescoring")
-        # <YOUR CODE GOES HERE>
-        return
+        
+        rescored_beams = []
+        for beam in beams:
+            hypothesis, log_prob = beam
+            lm_prob = self.lm_model.score(hypothesis)
+            rescored_prob = log_prob + self.alpha * lm_prob
+            rescored_beams.append((hypothesis, rescored_prob))
+            
+        best_hypothesis = max(rescored_beams, key=lambda x: x[1])[0] # Get the best hypothesis based on rescored probability
+
+        return ''.join(best_hypothesis).replace(self.word_delimiter, ' ').strip() # Join the tokens and remove word delimiters
 
     def decode(self, audio_input: torch.Tensor, method: str = "greedy") -> str:
         """
