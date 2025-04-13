@@ -98,11 +98,12 @@ class Wav2Vec2Decoder:
             new_beams = [(prob, hyp, last_char) for (hyp, last_char), prob in new_beams.items()] # Convert dictionary to list of tuples
             beams = sorted(new_beams, key=lambda x: x[0], reverse=True)[:self.beam_width]        # Keep only the top beam_width beams
 
-        beams = [(hyp, torch.log(prob + 1e-10).item()) for prob, hyp, _ in beams] # Convert beams to log probabilities
-        transcript = max(beams, key=lambda x: x[0])[0]                            # Get the best hypothesis based on log probability
+        beams = [(hyp, torch.log10(prob + 1e-10).item()) for prob, hyp, _ in beams] # Convert beams to log probabilities (base is 10 to make compatible with KenLM)
+        transcript = max(beams, key=lambda x: x[0])[0]                              # Get the best hypothesis based on log probability
 
         best_hypothesis = ''.join(transcript).replace(self.word_delimiter, ' ').strip() # Join the tokens and remove word delimiters
 
+        # The format has been slightly changed to return the best hypothesis directly (it should speed up rescoring a bit)
         if return_beams:
             return beams
         else:
@@ -139,9 +140,12 @@ class Wav2Vec2Decoder:
                     acc_beam_prob = new_beams.get(key, torch.zeros(1)) # Get the existing beam probability
                     
                     _, last_word = hypothesis.rsplit(' ', 1) if ' ' in hypothesis else (None, '') # Get the last word from the hypothesis
-                    lm_prob = torch.tensor(self.lm_model.score(last_word, bos=True, eos=False)) # Get the LM score for the hypothesis
+                                                                                                  # We score only the last word since there is no strong connection between the words (this is 3/4-gram LM)
+                    lm_prob = torch.tensor(self.lm_model.score(last_word, eos=False))             # Get the LM score for the hypothesis
 
-                    new_beams[key] = acc_beam_prob + proba * beam_prob + self.alpha * lm_prob # Update the probability of the new beam
+                    beta_bonus = self.beta if next_id == self.word_delimiter else 0 # Apply word bonus only for the word delimiter
+
+                    new_beams[key] = acc_beam_prob + proba * beam_prob + self.alpha * torch.pow(10, lm_prob) + beta_bonus # Update the probability of the new beam
 
             new_beams = [(prob, hyp, last_char) for (hyp, last_char), prob in new_beams.items()] # Convert dictionary to list of tuples
             beams = sorted(new_beams, key=lambda x: x[0], reverse=True)[:self.beam_width]        # Keep only the top beam_width beams
