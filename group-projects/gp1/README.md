@@ -55,7 +55,9 @@ Please keep in mind that samplerate and file extension are not constant across a
 
 * The labeling is not normalized, meaning that direct transcription may not provide you digits directly (unless you wanna try training such setup) - what you actually hear and what is given as a label differ. You can think of applying normalization and denormalization to transcriptions
 
-* Note that word “тысяча” is always skipped in final denormalized string output
+* Try being creative with how you construct the vocabulary of symbols/words/subwords for recognition
+
+* Note that word “тысяча” can highlight you that you will have to have three more symbols after it even if there is nothing spoken after it (e.g. “одна тысяча пять” -> 1_005)
 
 * Don’t forget to use various audio augmentations techniques while training, as some samples in `dev/` and `test/` splits are noisy
 
