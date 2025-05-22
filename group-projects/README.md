@@ -3,7 +3,7 @@
 There are two group projects in this course:
 
 1. [GroupProject1 - ASR numbers recognition in Russian](./gp1/README.md) [30 pts]
-2. [GroupProject2 - XXX](./gp2/README.md) [20 pts]
+2. [GroupProject2 - Neural Vocoder Training](./gp2/README.md) [20 pts]
 
 
 ### Deadlines
