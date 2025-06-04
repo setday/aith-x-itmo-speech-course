@@ -21,7 +21,7 @@ Overall there are 3 data splits of 14 unique `spk_id` from **spk_A** to **spk_N*
     - 12,553 samples from 6 `spk_id` 
 - `dev/`: [**download link**](https://drive.google.com/file/d/1Jlw09RSJjhJTxdN3VQj5Bph4zRNwOqSL/view?usp=sharing)
     - 2,265 samples from 10 `spk_id`
-- `test/`: not available for local development (LINK TO KAGGLE EVALUATION TO BE PROVIDED SOON)
+- `test/`: not available for local development: [Kaggle challenge evaluation page](https://www.kaggle.com/competitions/asr-numbers-recognition-in-russian). Challenge invitation you'll receive via Google Classroom assignment
     - 2,265 samples from all 14 `spk_id`
 
 > NOTE: `dev/` data CAN NOT be used for trainig, but for validation purposes only
@@ -55,14 +55,16 @@ Please keep in mind that samplerate and file extension are not constant across a
 
 * The labeling is not normalized, meaning that direct transcription may not provide you digits directly (unless you wanna try training such setup) - what you actually hear and what is given as a label differ. You can think of applying normalization and denormalization to transcriptions
 
-* Note that word “тысяча” is always skipped in final denormalized string output
+* Try being creative with how you construct the vocabulary of symbols/words/subwords for recognition
+
+* Note that word “тысяча” can highlight you that you will have to have three more symbols after it even if there is nothing spoken after it (e.g. “одна тысяча пять” -> 1_005)
 
 * Don’t forget to use various audio augmentations techniques while training, as some samples in `dev/` and `test/` splits are noisy
 
 
 ### Evaluation
 
-- Evaluation of models is held on the Kaggle platform as a code competition. Note that this is used for inference only, training of model can be performed in an offline fashion
+- Evaluation of models is held on the [Kaggle platform](https://www.kaggle.com/competitions/asr-numbers-recognition-in-russian). Note that this is used for evaluation only, training of model can be performed in an offline fashion with the available hardware. Though you can still stick to the in-Kaggle training with data available on the competition page (duplicated)
 
 - The model performance will be evaluated on the holdout testing set, containing extra out-of-domain test speakers `spk_id`
 
@@ -72,14 +74,15 @@ Please keep in mind that samplerate and file extension are not constant across a
 ### Deliverables
 
 - Kaggle Competition submission and corresponding position on the leaderboard:
-    - submission notebook has to import your model and weights from GitHub
+    - Public submission notebook has to import your model and weights from GitHub (e.g. github release) and run inference + decoding
 
 - Public GitHub repository with source code of your training pipeline and model weights (weights as a release in order to be imported in Kaggle)
 
-- Google Classroom PDF report describing your work, experiments and results (and a history of submissions) in free form
+- Google Classroom PDF report describing your work, experiments and results (also your Kaggle team name, and a history of submissions) in free form
 
 
 ### Resources
 
+- [Kaggle copmetition submission page](https://www.kaggle.com/competitions/asr-numbers-recognition-in-russian)
 - For text normalization and denormalization you can use [NeMo toolkit](https://github.com/NVIDIA/NeMo-text-processing/blob/main/tutorials/Text_(Inverse)_Normalization.ipynb) or [num2words](https://pypi.org/project/num2words/) library
 - Making models smaller and more efficient with [different types of convolutions](https://animatedai.github.io/)
