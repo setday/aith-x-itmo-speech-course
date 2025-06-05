@@ -17,13 +17,13 @@ class BaseAudioConfig:
 @dataclass
 class TrainConfig:
     data_path="e:/Projects/AITH/aith-x-itmo-speech-course/tts_models"
-    batch_size=8
+    batch_size=16
     num_workers=4
         
-    upsample_scales=[4, 4, 4, 4]
+    upsample_scales=[4,4,4,4]
         
     epochs=100
-    learning_rate=0.0001
+    learning_rate=0.0002
     gradient_clip=5.0
         
     checkpoint_dir="checkpoints"

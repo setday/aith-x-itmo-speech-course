@@ -3,12 +3,14 @@ import argparse
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
 import torchaudio
-
-from tqdm import tqdm
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 
 from parallel_wavegan import PWGGenerator, PWGDiscriminator
 from datasets import LJSpeechDataset
@@ -16,100 +18,136 @@ from mr_stft_loss import MultiResolutionSTFTLoss
 from configs import audio_config, TrainConfig as Config
 
 
-def train(config):
-    os.makedirs(config.checkpoint_dir, exist_ok=True)
+torch.set_float32_matmul_precision('medium')
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+class ParallelWaveGANModel(pl.LightningModule):
+    def __init__(self, config, audio_config):
+        super().__init__()
+
+        self.save_hyperparameters()
+        self.config = config
+        self.audio_config = audio_config
+        
+        self.generator = PWGGenerator(
+            in_channels=audio_config.num_mels, 
+            out_channels=1, 
+            upsample_scales=config.upsample_scales
+        )
+        
+        self.discriminator = PWGDiscriminator()
+        
+        self.stft_loss = MultiResolutionSTFTLoss(
+            fft_sizes=[512, 1024, 2048],
+            hop_sizes=[128, 256, 512],
+            win_lengths=[512, 1024, 2048]
+        )
+        
+        self.automatic_optimization = False
     
-    generator = PWGGenerator(
-        in_channels=audio_config.num_mels, 
-        out_channels=1, 
-        upsample_scales=config.upsample_scales
-    ).to(device)
+    def forward(self, mel_spec):
+        return self.generator(mel_spec)
+
+    def training_step(self, batch, batch_idx):
+        waveform = batch["waveform"]
+        mel_spec = batch["mel_spec"]
+        
+        opt_d, opt_g = self.optimizers()
+        
+        opt_d.zero_grad()
+        
+        d_real = self.discriminator(waveform)
+        fake_audio = self.generator(mel_spec)[:, :, :self.config.train_seq_length]
+        d_fake = self.discriminator(fake_audio.detach())
+
+        loss_d_real = F.mse_loss(d_real, torch.ones_like(d_real))
+        loss_d_fake = F.mse_loss(d_fake, torch.zeros_like(d_fake))
+        loss_d = loss_d_real + loss_d_fake
+        
+        self.manual_backward(loss_d)
+        nn.utils.clip_grad_norm_(self.discriminator.parameters(), self.config.gradient_clip)
+        opt_d.step()
+        
+        opt_g.zero_grad()
+
+        d_fake = self.discriminator(fake_audio)
+        adv_loss = F.mse_loss(d_fake, torch.ones_like(d_fake))
+        recon_loss = self.stft_loss(fake_audio, waveform)
+        
+        loss_g = recon_loss + self.config.lambda_adv * adv_loss
+        
+        self.manual_backward(loss_g)
+        nn.utils.clip_grad_norm_(self.generator.parameters(), self.config.gradient_clip)
+        opt_g.step()
+        
+        self.log_dict({
+            "loss_d": loss_d,
+            "loss_g": loss_g,
+            "adv_loss": adv_loss,
+            "recon_loss": recon_loss
+        }, prog_bar=True, on_step=True, logger=True, on_epoch=True)
+        
+        if self.global_step % self.config.log_interval == 0:
+            self._log_audio(mel_spec, fake_audio)
+            
+        return {"loss": loss_g}
+
+    def _log_audio(self, mel_spec, fake_audio):
+        with torch.no_grad():
+            sample_mel = mel_spec[0:1]
+            sample_wav = self.generator(sample_mel).squeeze(0)
+            
+            # os.makedirs(self.config.checkpoint_dir, exist_ok=True)
+            # filename = f"{self.config.checkpoint_dir}/sample_{self.global_step}.wav"
+            # torchaudio.save(
+            #     filename,
+            #     sample_wav.cpu(),
+            #     self.audio_config.sample_rate
+            # )
+            
+            if self.logger and hasattr(self.logger, "experiment"):
+                self.logger.experiment.add_audio(
+                    f"generated_audio_{self.global_step}", 
+                    sample_wav.unsqueeze(0), 
+                    self.global_step, 
+                    self.audio_config.sample_rate
+                )
     
-    discriminator = PWGDiscriminator().to(device)
-    
-    optim_g = optim.Adam(generator.parameters(), lr=config.learning_rate)
-    optim_d = optim.Adam(discriminator.parameters(), lr=config.learning_rate)
-    
+    def configure_optimizers(self):
+        optim_d = optim.Adam(self.discriminator.parameters(), lr=self.config.learning_rate)
+        optim_g = optim.Adam(self.generator.parameters(), lr=self.config.learning_rate)
+        
+        return [optim_d, optim_g], []
+
+
+def train(config):
     dataset = LJSpeechDataset(config.data_path, config.train_seq_length)
     dataloader = DataLoader(
         dataset, 
         batch_size=config.batch_size,
         shuffle=True,
         num_workers=config.num_workers,
-        pin_memory=True
+        pin_memory=True,
+        persistent_workers=True,
     )
     
-    stft_loss = MultiResolutionSTFTLoss(
-        fft_sizes=[512, 1024, 2048],
-        hop_sizes=[128, 256, 512],
-        win_lengths=[512, 1024, 2048]
-    ).to(device)
+    model = ParallelWaveGANModel(config, audio_config)
     
-    generator.train()
-    discriminator.train()
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=config.checkpoint_dir,
+        filename='wavegan-{step}',
+        save_top_k=5,
+        monitor='loss_g',
+        every_n_train_steps=config.checkpoint_interval
+    )
     
-    step = 0
-    for epoch in range(config.epochs):
-        print(f"Epoch {epoch+1}/{config.epochs}")
-        
-        for batch in tqdm(dataloader):
-            waveform = batch["waveform"].to(device)
-            mel_spec = batch["mel_spec"].to(device)
-            
-            optim_d.zero_grad()
-            
-            d_real = discriminator(waveform)
-            fake_audio = generator(mel_spec)[:, :, :config.train_seq_length]
-            d_fake = discriminator(fake_audio.detach())
-            
-            loss_d_real = torch.mean((d_real - 1.0) ** 2) # MSE loss for real
-            loss_d_fake = torch.mean(d_fake ** 2) # MSE loss for fake
-            loss_d = loss_d_real + loss_d_fake
-            
-            loss_d.backward()
-            nn.utils.clip_grad_norm_(discriminator.parameters(), config.gradient_clip)
-            optim_d.step()
-            
-            optim_g.zero_grad()
-            
-            d_fake = discriminator(fake_audio)
-            adv_loss = torch.mean((d_fake - 1.0) ** 2) # MSE loss for adversarial
-            
-            recon_loss = stft_loss(fake_audio, waveform)
-            
-            loss_g = recon_loss + config.lambda_adv * adv_loss
-            
-            loss_g.backward()
-            nn.utils.clip_grad_norm_(generator.parameters(), config.gradient_clip)
-            optim_g.step()
-            
-            if step % config.log_interval == 0:
-                print(f"Step {step}, Gen Loss: {loss_g.item():.4f}, Disc Loss: {loss_d.item():.4f}")
-                
-                if step % (config.log_interval * 10) == 0:
-                    with torch.no_grad():
-                        sample_mel = mel_spec[0:1]
-                        sample_wav = generator(sample_mel).squeeze(0)
-                        
-                        torchaudio.save(
-                            f"{config.checkpoint_dir}/sample_{step}.wav",
-                            sample_wav.cpu(),
-                            audio_config.sample_rate
-                        )
-            
-            if step % config.checkpoint_interval == 0:
-                torch.save({
-                    'generator': generator.state_dict(),
-                    'discriminator': discriminator.state_dict(),
-                    'optim_g': optim_g.state_dict(),
-                    'optim_d': optim_d.state_dict(),
-                    'step': step,
-                    'epoch': epoch,
-                }, f"{config.checkpoint_dir}/checkpoint_{step}.pt")
-            
-            step += 1
+    pl.Trainer(
+        max_epochs=config.epochs,
+        accelerator='auto',
+        callbacks=[checkpoint_callback],
+        logger=TensorBoardLogger("lightning_logs", name="wavegan"),
+        log_every_n_steps=5,
+    ).fit(model, dataloader)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train ParallelWaveGAN vocoder")

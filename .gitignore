@@ -4,4 +4,3 @@ __pycache__/
 lightning_logs/
 *.pth
 *.gz
-*.pt

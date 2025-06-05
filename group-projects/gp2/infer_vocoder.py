@@ -7,8 +7,8 @@ import torchaudio
 
 from tqdm import tqdm
 
-from parallel_wavegan import PWGGenerator
-from train_vocoder import audio_config, Config
+from configs import audio_config, TrainConfig
+from train_vocoder import ParallelWaveGANModel 
 from t2spec_converter import TextToSpecConverter
     
 
@@ -18,20 +18,21 @@ def inference(checkpoint_path, text_path, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    generator = PWGGenerator(
-        in_channels=audio_config.num_mels, 
-        out_channels=1, 
-        upsample_scales=Config().upsample_scales,
+    generator = ParallelWaveGANModel(
+        config=TrainConfig(),
+        audio_config=audio_config
     ).to(device)
 
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    generator.load_state_dict(checkpoint['generator'])
-    generator.eval()
+    torch.serialization.add_safe_globals([TrainConfig])
+
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    generator.load_state_dict(checkpoint['state_dict'], strict=False)
     
     t2s = TextToSpecConverter()
     
     with open(text_path, 'r') as f:
         for idx, line in tqdm(enumerate(f), desc="Generating audio"):
+            print(f"Processing line {idx}: {line.strip()}")
             mel_spec = torch.tensor(t2s.text2spec(line.strip()), device=device).T
 
             with torch.no_grad():
