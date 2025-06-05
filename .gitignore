@@ -1,5 +1,7 @@
 data/
+tts_models/
 __pycache__/
 lightning_logs/
 *.pth
 *.gz
+*.pt

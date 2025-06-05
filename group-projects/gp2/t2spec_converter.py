@@ -27,6 +27,8 @@ class TextToSpecConverter:
             mel_spec (numpy.ndarray): Mel spectrogram of the input text
                 with shape [C, T] = [num_mel_channels, num_frames]
         """
+        if self.use_cuda: self.model = self.model.to(self.device)
+
         outputs = synthesis(
             self.model,
             text,
